@@ -1,0 +1,7 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    { "type": "node", "request": "launch", "name": "Đi chùa · Trải nghiệm", "program": "${workspaceFolder}/server/index.js", "console": "integratedTerminal" },
+    { "type": "node", "request": "launch", "name": "Đi chùa · TikTok LIVE", "program": "${workspaceFolder}/server/index.js", "args": ["--live"], "console": "integratedTerminal" }
+  ]
+}

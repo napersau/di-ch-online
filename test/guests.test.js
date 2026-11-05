@@ -1,0 +1,92 @@
+'use strict';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { Temple } = require('../server/temple');
+const { createApp } = require('../server');
+
+test('mỗi lượt 2–3 khách phụ dâng hương, tách biệt người xem, quà và công đức', () => {
+  const temple = new Temple({ demo: false });
+  const ritual = temple.addGuests(3);
+  const state = temple.view();
+  assert.equal(ritual.source, 'npc');
+  assert.equal(ritual.participants.length, 3);
+  assert.equal(state.guestCount, 3);
+  assert.equal(state.visitorCount, 0);
+  assert.equal(state.totalCoins, 0);
+  assert.equal(state.merits, 0);
+  assert.equal(state.donors.length, 0);
+  assert.equal(state.gifts.length, 0);
+  assert.ok(state.visitors.every(p => p.isNpc && p.coins === 0 && p.seat >= 0));
+  assert.equal(temple.handle({ type: 'gift', user: ritual.participants[0], coins: 99 }).ok, false);
+  assert.equal(temple.snapshot().players.length, 0);
+  temple.addGuests(3); temple.addGuests(3); temple.addGuests(3);
+  assert.equal(temple.guests.size, 12);
+  assert.throws(() => temple.addGuests(2), /đủ khách phụ/);
+  assert.throws(() => temple.addGuests(1), /2 hoặc 3/);
+});
+
+test('đệm giữ vị trí khi người khác tương tác; người thật được ưu tiên trước khách phụ', () => {
+  let now = 100000;
+  const temple = new Temple({ demo: false, now: () => now });
+  const a = { id: 'real-a', name: 'A' };
+  const b = { id: 'real-b', name: 'B' };
+  temple.handle({ type: 'join', user: a }); now++;
+  temple.handle({ type: 'join', user: b });
+  const original = new Map(temple.view().visitors.map(p => [p.id, p.seat]));
+  temple.addGuests(3);
+  now++;
+  temple.handle({ type: 'chat', user: b, text: 'bình an' });
+  const after = new Map(temple.view().visitors.map(p => [p.id, p.seat]));
+  assert.equal(after.get(a.id), original.get(a.id));
+  assert.equal(after.get(b.id), original.get(b.id));
+  for (let i = 0; i < 22; i++) temple.handle({ type: 'join', user: { id: `real-${i}`, name: `Khách ${i}` } });
+  const full = temple.view();
+  assert.equal(full.visitors.length, 24);
+  assert.ok(full.visitors.every(p => !p.isNpc));
+  assert.equal(new Set(full.visitors.map(p => p.seat)).size, 24);
+  temple.clearGuests();
+  assert.equal(temple.view().guestCount, 0);
+  assert.equal(temple.view().visitorCount, 24);
+});
+
+test('sự kiện vào phòng TikTok xếp chỗ ngay, không cần bình luận và không thêm trùng', async t => {
+  const app = createApp({ demo: false, persist: false, simulate: false, adminToken: 'guest-test' });
+  t.after(() => app.close());
+  const member = { common: { msgId: 'member-arrival' }, user: { userId: '111', nickname: 'Khách mới', uniqueId: 'new_viewer' } };
+  app.bridge._forward('member', member);
+  app.bridge._forward('member', member);
+  const state = app.temple.view();
+  assert.equal(state.visitorCount, 1);
+  assert.equal(state.visitors[0].id, 'tt-111');
+  assert.equal(state.visitors[0].seat, 0);
+  assert.equal(state.visitors[0].prayer, '');
+  assert.equal(state.totalCoins, 0);
+  assert.equal(app.bridge.status().eventsReceived, 1);
+});
+
+test('API khách phụ cần đăng nhập, gửi sự kiện dâng hương riêng và dọn được khách phụ', async t => {
+  const app = createApp({ demo: false, persist: false, simulate: false, adminToken: 'guest-test' });
+  await new Promise(resolve => app.server.listen(0, '127.0.0.1', resolve));
+  t.after(() => app.close());
+  const base = `http://127.0.0.1:${app.server.address().port}`;
+  const post = (body, token = '') => fetch(`${base}/api/admin/guests`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-token': token }, body: JSON.stringify(body) });
+  assert.equal((await post({ action: 'add' })).status, 401);
+  const abort = new AbortController();
+  const stream = await fetch(`${base}/api/stream`, { signal: abort.signal });
+  const reader = stream.body.getReader();
+  await reader.read();
+  const response = await post({ action: 'add' }, 'guest-test');
+  const result = await response.json();
+  assert.ok([2, 3].includes(result.added));
+  let frames = '';
+  while (!frames.includes('event: incense')) frames += new TextDecoder().decode((await reader.read()).value);
+  assert.match(frames, /"source":"npc"/);
+  assert.doesNotMatch(frames, /event: gift\n/);
+  assert.equal(app.temple.view().visitorCount, 0);
+  app.dispatch({ type: 'gift', user: { id: 'donor', name: 'Người thật' }, coins: 30 });
+  assert.equal((await post({ action: 'clear' }, 'guest-test')).status, 200);
+  assert.equal(app.temple.view().guestCount, 0);
+  assert.equal(app.temple.view().totalCoins, 30);
+  assert.equal(app.temple.view().donors[0].name, 'Người thật');
+  abort.abort();
+});

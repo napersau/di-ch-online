@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 64">
+ <defs><linearGradient id="side" x2="0" y2="1"><stop stop-color="#bd8650"/><stop offset="1" stop-color="#53351e"/></linearGradient><radialGradient id="top" cx=".45" cy=".3" r=".85"><stop stop-color="#e2bf82"/><stop offset=".6" stop-color="#b58a52"/><stop offset="1" stop-color="#7f572f"/></radialGradient><pattern id="weave" width="5" height="4" patternUnits="userSpaceOnUse"><path d="M0 1h5M1 0v4" stroke="#5b3d23" stroke-opacity=".15" stroke-width=".6"/></pattern></defs>
+ <ellipse cx="80" cy="49" rx="75" ry="12" fill="#160c05" opacity=".55"/>
+ <path d="M8 30v12c0 23 144 23 144 0V30" fill="url(#side)" stroke="#4f3019" stroke-width="2"/>
+ <ellipse cx="80" cy="30" rx="72" ry="23" fill="url(#top)" stroke="#e7c894" stroke-width="1.6"/>
+ <ellipse cx="80" cy="30" rx="66" ry="18" fill="url(#weave)" stroke="#815c36" stroke-opacity=".6"/>
+ <ellipse cx="80" cy="29" rx="57" ry="14" fill="none" stroke="#f6da9f" stroke-opacity=".3" stroke-dasharray="2 2"/>
+ <g fill="none" stroke="#825f39" stroke-width="1" opacity=".55"><path d="M80 20q-12 7 0 14 12-7 0-14Z"/><path d="M77 23q-13-5-14 0 1 11 17 13 16-2 17-13-1-5-14 0"/></g>
+</svg>

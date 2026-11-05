@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: di-chua-online
+    runtime: node
+    plan: free
+    numInstances: 1
+    buildCommand: npm ci --omit=dev
+    startCommand: npm run live
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CHUA_HOST
+        value: 0.0.0.0
+      - key: CHUA_ADMIN_TOKEN
+        generateValue: true
+      - key: TRUST_PROXY
+        value: "1"
